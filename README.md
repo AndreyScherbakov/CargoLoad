@@ -43,6 +43,18 @@
 
 ### Сборка
 
+**Быстрый способ — `build.bat`** (двойной клик или из консоли):
+
+```bat
+build.bat           :: один self-contained CargoLoader.exe (~68 МБ), .NET не нужен
+build.bat folder    :: папка с exe и библиотеками
+build.bat fast      :: маленький exe, нужен .NET 8 Desktop Runtime
+```
+
+Результат: `dist\CargoLoader.exe`.
+
+**Отладочная сборка:**
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1
 ```
@@ -52,6 +64,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1
 > Примечание: `build.ps1` перенаправляет домашние каталоги dotnet и NuGet внутрь рабочей папки
 > (`.dotnet-home`, `.nuget`, `.appdata`, `.localappdata`), потому что песочница DSH запрещает
 > запись в профиль пользователя. Вне песочницы сработает и обычный `dotnet build`.
+> `build.bat` работает в обычном окружении без перенаправлений.
 
 ### Запуск
 
