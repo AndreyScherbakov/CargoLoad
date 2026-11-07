@@ -34,7 +34,20 @@ namespace CargoLoad
         {
             InitializeComponent();
 
-            string dbPath = System.IO.Path.Combine(AppContext.BaseDirectory, "cargoload.db");
+            // База хранится в профиле пользователя, поэтому приложение работает
+            // из любой папки (в т.ч. Program Files) без прав администратора.
+            // Если профиль недоступен (ограниченная среда), падаем в папку exe.
+            string dataDir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CargoLoad");
+            try
+            {
+                Directory.CreateDirectory(dataDir);
+            }
+            catch (Exception)
+            {
+                dataDir = AppContext.BaseDirectory;
+            }
+            string dbPath = System.IO.Path.Combine(dataDir, "cargoload.db");
             _db = new Database(dbPath);
 
             Loaded += (_, __) => OnLoaded();

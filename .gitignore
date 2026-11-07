@@ -32,6 +32,11 @@ x86/
 /SystemInfo/
 /screenshot.png
 
+# ---------- Готовые сборки ----------
+/dist/
+/dist-folder/
+/extract/
+
 # ---------- Временные артефакты ----------
 _*.png
 _*.out
