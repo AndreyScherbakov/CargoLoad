@@ -35,6 +35,19 @@ namespace CargoLoad
         public bool IsRear => (Load & LoadSide.Rear) != 0;
 
         public double VolumeM3 => LengthMm / 1000.0 * WidthMm / 1000.0 * HeightMm / 1000.0;
+
+        public string DimsText => $"{LengthMm / 1000.0:0.##} × {WidthMm / 1000.0:0.##} × {HeightMm / 1000.0:0.##}";
+        public string PayloadText => $"{PayloadKg / 1000.0:0.##}";
+        public string LoadText =>
+            Load switch
+            {
+                LoadSide.RearSide => "зад / бок",
+                LoadSide.SideTop => "бок / верх",
+                LoadSide.Top => "верх",
+                LoadSide.Rear => "зад",
+                LoadSide.Side => "бок",
+                _ => "—",
+            };
     }
 
     public sealed class CargoType
@@ -78,6 +91,7 @@ namespace CargoLoad
         public int Seq { get; set; }
         public int CargoTypeId { get; set; }
         public string Name { get; set; } = "";
+        public int VehicleIndex { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public double Z { get; set; }

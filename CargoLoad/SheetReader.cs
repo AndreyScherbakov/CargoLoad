@@ -172,11 +172,15 @@ namespace CargoLoad
             while ((line = reader.ReadLine()) != null)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
+
+                // BOM и невидимые символы в начале строки ломают имена колонок
+                line = line.TrimStart('\uFEFF', '\u200B');
+
                 var parts = SplitCsv(line, sep);
                 var row = new List<object?>();
                 foreach (var p in parts)
                 {
-                    string s = p.Trim().Trim('"');
+                    string s = p.Trim().Trim('"').Trim('\uFEFF', '\u200B');
                     if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double d))
                         row.Add(d);
                     else
