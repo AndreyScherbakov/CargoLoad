@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Microsoft.Win32;
@@ -114,7 +116,32 @@ namespace CargoLoad
         {
             Theme.Apply(dark);
             ThemeButton.Content = dark ? "Тема: тёмная" : "Тема: светлая";
+            ApplyTitleBar(dark);
             if (_multi != null) DrawSelectedTruck();
+        }
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        /// <summary>Тёмный/светлый системный заголовок окна.</summary>
+        private void ApplyTitleBar(bool dark)
+        {
+            try
+            {
+                IntPtr hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero) return;
+
+                int value = dark ? 1 : 0;
+                const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+                const int DWMWA_USE_IMMERSIVE_DARK_MODE_OLD = 19;
+
+                if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref value, sizeof(int)) != 0)
+                    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, ref value, sizeof(int));
+            }
+            catch (Exception)
+            {
+                // не критично: заголовок останется стандартным
+            }
         }
 
         private void ThemeButton_Click(object sender, RoutedEventArgs e)
