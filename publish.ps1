@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Output = "$PSScriptRoot\dist",
     [string]$Runtime = "win-x64",
     [switch]$FrameworkDependent,

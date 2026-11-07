@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Project = "$PSScriptRoot\CargoLoad\CargoLoad.csproj",
     [string]$Configuration = "Debug"
 )

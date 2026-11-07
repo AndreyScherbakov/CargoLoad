@@ -27,7 +27,8 @@ if errorlevel 1 goto nodotnet
 if not exist "%PROJ%" goto noproj
 
 echo [1/3] Очистка папки dist...
-if exist "%OUT%" rd /s /q "%OUT%"
+if exist "%OUT%" rd /s /q "%OUT%" 2>nul
+if exist "%OUT%" goto locked
 mkdir "%OUT%" 2>nul
 
 echo [2/3] Публикация (Release, win-x64)...
@@ -62,6 +63,13 @@ echo.
 if /i "%MODE%"=="fast" echo Внимание: этому варианту нужен установленный .NET 8 Desktop Runtime.
 pause
 exit /b 0
+
+:locked
+echo.
+echo ОШИБКА: файл dist\%EXENAME%.exe занят - приложение уже запущено.
+echo Закройте CargoLoader.exe (включая запущенный от администратора) и повторите сборку.
+pause
+exit /b 1
 
 :nodotnet
 echo ОШИБКА: не найден .NET SDK (команда dotnet).

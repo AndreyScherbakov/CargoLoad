@@ -41,7 +41,7 @@ namespace CargoLoad
 
     public partial class MainWindow : Window
     {
-        private readonly Database _db;
+        private Database _db = null!;
         private List<Vehicle> _vehicles = new();
         private List<Shipment> _shipments = new();
         private List<TruckPick> _truckPicks = new();
@@ -66,32 +66,61 @@ namespace CargoLoad
 
         private static Database OpenDatabase()
         {
-            string profileDir = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CargoLoad");
+            // Порядок: профиль → roaming → TEMP → папка программы.
+            // Каждое место проверяем реальной записью пробного файла.
+            var candidates = new List<string>
+            {
+                System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CargoLoad"),
+                System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CargoLoad"),
+                System.IO.Path.Combine(System.IO.Path.GetTempPath(), "CargoLoad"),
+                AppContext.BaseDirectory,
+            };
 
-            // 1) профиль пользователя, 2) папка программы (portable / ограниченная среда)
-            foreach (string dir in new[] { profileDir, AppContext.BaseDirectory })
+            var errors = new List<string>();
+
+            foreach (string dir in candidates)
             {
                 try
                 {
                     Directory.CreateDirectory(dir);
-                    var db = new Database(System.IO.Path.Combine(dir, "cargoload.db"));
-                    return db;
+
+                    string probe = System.IO.Path.Combine(dir, ".write-test");
+                    File.WriteAllText(probe, "ok");
+                    File.Delete(probe);
+
+                    return new Database(System.IO.Path.Combine(dir, "cargoload.db"));
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // недоступно на запись — пробуем следующее место
+                    errors.Add(dir + " — " + ex.Message);
                 }
             }
 
-            throw new InvalidOperationException("Не удалось открыть базу данных ни в профиле, ни рядом с программой.");
+            throw new InvalidOperationException(string.Join("\n", errors));
         }
 
         public MainWindow()
         {
             InitializeComponent();
 
-            _db = OpenDatabase();
+            try
+            {
+                _db = OpenDatabase();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Не удалось создать папку для данных программы.\n\n" +
+                    "Проверьте, что у вас есть права на запись в профиль пользователя " +
+                    "(обычно %LOCALAPPDATA%\\CargoLoad).\n\n" +
+                    "Подробности:\n" + ex.Message,
+                    "Раскладка грузов", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                Application.Current?.Shutdown(1);
+                return;
+            }
 
             Loaded += (_, __) => OnLoaded();
         }
