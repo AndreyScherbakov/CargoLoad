@@ -8,6 +8,10 @@
     <UseWPF>true</UseWPF>
     <!-- Явный манифест: запуск без прав администратора (asInvoker), DPI, длинные пути -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>1.2.0</Version>
+    <Product>Раскладка грузов</Product>
+    <Company>CargoLoad</Company>
   </PropertyGroup>
 
 </Project>
