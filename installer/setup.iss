@@ -2,7 +2,7 @@
 ; Собирается скриптом make-installer.ps1
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.2.1"
+  #define MyAppVersion "1.3.0"
 #endif
 
 #define MyAppName "Раскладка грузов"

@@ -29,6 +29,9 @@ namespace CargoLoad
         public double TruckVolumeM3;
         public int PayloadKg;
         public Vehicle Vehicle = null!;
+
+        /// <summary>Баланс груза: оси (перед/зад) и борта (лево/право).</summary>
+        public TruckBalance Balance = null!;
     }
 
     /// <summary>Одна машина в плане перевозки.</summary>
@@ -60,7 +63,52 @@ namespace CargoLoad
 
     public static class Packer
     {
+        /// <summary>Текущее распределение веса при укладке (для выбора сбалансированной позиции).</summary>
+        private sealed class BalanceState
+        {
+            public double LeftW, RightW, FrontW, RearW;
+
+            public void Add(Packed p, double L, double W)
+            {
+                double w = p.Item.Weight;
+                if (w <= 0) return;
+
+                double leftShare = ShareBefore(p.Y, p.W, W / 2.0);
+                double frontShare = ShareBefore(p.X, p.L, L / 2.0);
+
+                LeftW += w * leftShare;
+                RightW += w * (1 - leftShare);
+                FrontW += w * frontShare;
+                RearW += w * (1 - frontShare);
+            }
+        }
+
+        /// <summary>Допуск перекоса по бортам, % от массы груза.</summary>
+        public const double SideBalanceTolerancePct = 10.0;
+
         public static PackResult Pack(List<PackItem> items, Vehicle vehicle, RotationMode mode)
+            => Pack(items, vehicle, mode, SideBalanceTolerancePct);
+
+        /// <summary>
+        /// Укладка с учётом баланса. Сначала груз раскладывается со средним весом баланса;
+        /// если перекос по бортам выше допуска — раскладка повторяется с усиленным весом
+        /// баланса и берётся лучший вариант.
+        /// </summary>
+        public static PackResult Pack(List<PackItem> items, Vehicle vehicle, RotationMode mode, double sideTolerancePct)
+        {
+            var first = PackCore(items, vehicle, mode, 2.5);
+            if (first.Balance.IsSideBalanced(sideTolerancePct)) return first;
+
+            var second = PackCore(items, vehicle, mode, 10.0);
+
+            bool betterSide = second.Balance.SideImbalancePct + 0.01 < first.Balance.SideImbalancePct;
+            bool sameSide = Math.Abs(second.Balance.SideImbalancePct - first.Balance.SideImbalancePct) <= 0.5;
+            bool denser = second.Placed.Count > first.Placed.Count;
+
+            return (betterSide || (sameSide && denser)) ? second : first;
+        }
+
+        private static PackResult PackCore(List<PackItem> items, Vehicle vehicle, RotationMode mode, double balanceWeight)
         {
             double L = vehicle.LengthMm, W = vehicle.WidthMm, H = vehicle.HeightMm;
             int payload = vehicle.PayloadKg;
@@ -80,6 +128,7 @@ namespace CargoLoad
                 .ToList();
 
             var placed = new List<Packed>();
+            var state = new BalanceState();
             double placedWeight = 0;
 
             double maxDim = sorted.Count > 0 ? sorted.Max(i => Math.Max(i.L, Math.Max(i.W, i.H))) : 1;
@@ -88,7 +137,8 @@ namespace CargoLoad
 
             foreach (var item in sorted)
             {
-                if (!TryPlace(item, L, W, H, payload, mode, placed, placedWeight, hasSideRule, farDepth, vehicle, out var box))
+                if (!TryPlace(item, L, W, H, payload, mode, placed, placedWeight, hasSideRule, farDepth,
+                        vehicle, state, balanceWeight, out var box))
                 {
                     result.Unplaced.Add(item);
                 }
@@ -96,6 +146,7 @@ namespace CargoLoad
                 {
                     placed.Add(box);
                     placedWeight += item.Weight;
+                    state.Add(box, L, W);
                 }
             }
 
@@ -108,40 +159,106 @@ namespace CargoLoad
             }
             result.UsedVolumeM3 = usedM3;
             result.TotalWeightKg = totalKg;
+            result.Balance = TruckBalance.Compute(placed, L, W);
             return result;
         }
 
         private static bool TryPlace(PackItem item, double L, double W, double H, int payload,
             RotationMode mode, List<Packed> placed, double placedWeight,
-            bool widthRule, double farDepth, Vehicle vehicle, out Packed box)
+            bool widthRule, double farDepth, Vehicle vehicle,
+            BalanceState state, double balanceWeight, out Packed box)
         {
             box = null!;
 
-            foreach (var (lx, ly, lz) in Orientations(item, mode))
+            // Сначала ищем место на предпочтительном борту (борта чередуются при укладке),
+            // и только если там места нет — на противоположном.
+            for (int pass = 0; pass < 2; pass++)
             {
-                if (lx > L || ly > W || lz > H) continue;
+                // сначала более лёгкий борт, затем противоположный
+                bool wantLeft = pass == 0 ? state.LeftW <= state.RightW : state.LeftW > state.RightW;
 
+                Packed? best = null;
+                double bestCost = double.MaxValue;
                 int tries = 0;
-                foreach (double z in ZLevels(item, lz, H, placed))
+                int validSeen = 0;
+                bool stopAll = false;
+
+                foreach (var (lx, ly, lz) in Orientations(item, mode))
                 {
-                    foreach (var (x, y) in CandidateXY(lx, ly, placed))
+                    if (lx > L || ly > W || lz > H) continue;
+
+                    foreach (double z in ZLevels(item, lz, H, placed))
                     {
-                        if (++tries > 600) break;
-                        if (CanPlace(item, lx, ly, lz, x, y, z, L, W, H, payload, placed, placedWeight, widthRule, farDepth, vehicle))
+                        foreach (var (x, y) in CandidateXY(lx, ly, placed, L, W))
                         {
-                            box = new Packed
+                            if (++tries > 900) { stopAll = true; break; }
+
+                            bool isLeft = (y + ly / 2.0) < W / 2.0;
+                            if (isLeft != wantLeft) continue;
+
+                            if (!CanPlace(item, lx, ly, lz, x, y, z, L, W, H, payload, placed, placedWeight,
+                                    widthRule, farDepth, vehicle))
+                                continue;
+
+                            double cost = CandidateCost(x, y, z, lx, ly, item.Weight, state, L, W, H, balanceWeight);
+                            if (cost < bestCost)
                             {
-                                Item = item, X = x, Y = y, Z = z,
-                                L = lx, W = ly, H = lz,
-                                Level = z < 0.5 ? 0 : 1,
-                            };
-                            return true;
+                                bestCost = cost;
+                                best = new Packed
+                                {
+                                    Item = item, X = x, Y = y, Z = z,
+                                    L = lx, W = ly, H = lz,
+                                    Level = z < 0.5 ? 0 : 1,
+                                };
+                            }
+
+                            if (++validSeen >= 24 || bestCost < 0.02) { stopAll = true; break; }
                         }
+                        if (stopAll) break;
                     }
-                    if (tries > 600) break;
+                    if (stopAll) break;
+                }
+
+                if (best != null)
+                {
+                    box = best;
+                    return true;
                 }
             }
+
             return false;
+        }
+
+        /// <summary>
+        /// <summary>
+        /// Чем ниже стоимость, тем лучше позиция: перекос перед/зад, компактность
+        /// укладки и высота яруса (баланс по бортам обеспечивается чередованием).
+        /// </summary>
+        private static double CandidateCost(double x, double y, double z, double lx, double ly, double weight,
+            BalanceState state, double L, double W, double H, double balanceWeight)
+        {
+            double frontShare = ShareBefore(x, lx, L / 2.0);
+
+            double front = state.FrontW + weight * frontShare;
+            double rear = state.RearW + weight * (1 - frontShare);
+
+            double totalX = Math.Max(front + rear, 1e-9);
+            double endImb = Math.Abs(front - rear) / totalX;
+
+            double compact = 0.5 * (x / Math.Max(L, 1) + y / Math.Max(W, 1));
+            double level = z / Math.Max(H, 1);
+
+            return balanceWeight * endImb + 0.55 * compact + 0.25 * level;
+        }
+
+        /// <summary>Доля отрезка [start, start+len], лежащая до границы mid.</summary>
+        private static double ShareBefore(double start, double len, double mid)
+        {
+            if (len <= 0) return 0;
+            double overlap = Math.Min(start + len, mid) - Math.Max(start, 0);
+            if (overlap <= 0) return 0;
+            if (overlap >= len) return 1;
+            return overlap / len;
         }
 
         private static IEnumerable<(double, double, double)> Orientations(PackItem item, RotationMode mode)
@@ -183,14 +300,24 @@ namespace CargoLoad
             return set;
         }
 
-        private static IEnumerable<(double, double)> CandidateXY(double lx, double ly, List<Packed> placed)
+        private static IEnumerable<(double, double)> CandidateXY(double lx, double ly, List<Packed> placed, double L, double W)
         {
             var xs = new SortedSet<double> { 0 };
             var ys = new SortedSet<double> { 0 };
+
+            // позиции вплотную к дальней стенке: без них укладка всегда
+            // прижимается к одному борту и баланс недостижим
+            double farX = L - lx;
+            double farY = W - ly;
+            if (farX > 0.5) xs.Add(farX);
+            if (farY > 0.5) ys.Add(farY);
+
             foreach (var p in placed)
             {
                 xs.Add(p.X + p.L);
                 ys.Add(p.Y + p.W);
+                if (p.X - lx > 0.5) xs.Add(p.X - lx);
+                if (p.Y - ly > 0.5) ys.Add(p.Y - ly);
             }
             foreach (double y in ys)
                 foreach (double x in xs)
@@ -361,11 +488,22 @@ namespace CargoLoad
                 k = Math.Max(k, (int)Math.Ceiling(needWeight / Math.Max(1, maxPayload)));
                 k = Math.Min(k, limit);
 
-                var fastPlan = Enumerable.Range(0, Math.Max(1, k))
-                    .Select(_ => new TruckPlan { Vehicle = types[0], Count = 1 })
-                    .ToList();
+                // добираем машины, пока остаются неразмещённые места
+                MultiResult? bestFast = null;
+                for (int trucks = Math.Max(1, k); trucks <= limit; trucks++)
+                {
+                    var fastPlan = Enumerable.Range(0, trucks)
+                        .Select(_ => new TruckPlan { Vehicle = types[0], Count = 1 })
+                        .ToList();
 
-                return PackMulti(items, fastPlan, mode);
+                    var attempt = PackMulti(items, fastPlan, mode);
+                    if (bestFast == null || attempt.Unplaced.Count < bestFast.Unplaced.Count)
+                        bestFast = attempt;
+
+                    if (attempt.FitsAll) return attempt;
+                }
+
+                return bestFast!;
             }
 
             for (int k = kStart; k <= limit && attempts < maxAttempts; k++)

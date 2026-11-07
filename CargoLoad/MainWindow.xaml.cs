@@ -710,9 +710,17 @@ namespace CargoLoad
                 ? ""
                 : $"  ·  не размещено: {_multi.Unplaced.Count}";
 
+            double worstSide = _multi.Trucks.Count > 0
+                ? _multi.Trucks.Max(t => t.Result.Balance?.SideImbalancePct ?? 0)
+                : 0;
+            bool sideOk = worstSide <= Packer.SideBalanceTolerancePct;
+            string balanceInfo =
+                $"  ·  перекос бортов: {worstSide:0.0} %" + (sideOk ? "" : " (выше нормы)");
+
             SummaryText.Text =
                 $"Машин: {_multi.Trucks.Count}  ·  размещено: {totalItems - _multi.Unplaced.Count} из {totalItems}" +
-                $"  ·  заполнение объёма: {fill:0.0}%  ·  общий вес: {_multi.TotalWeightKg / 1000.0:0.###} т{unplaced}";
+                $"  ·  заполнение объёма: {fill:0.0}%  ·  общий вес: {_multi.TotalWeightKg / 1000.0:0.###} т" +
+                balanceInfo + unplaced;
 
             if (_multi.Unplaced.Count == 0)
             {
@@ -825,6 +833,55 @@ namespace CargoLoad
                 }
             }
 
+            // осевая линия кузова
+            PackCanvas.Children.Add(new Line
+            {
+                X1 = drawW / 2, Y1 = 0, X2 = drawW / 2, Y2 = drawH,
+                Stroke = Theme.GetBrush("Muted"),
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection { 3, 4 },
+                Opacity = 0.65,
+                IsHitTestVisible = false,
+            });
+
+            // центр тяжести груза
+            var bal = result.Balance;
+            if (bal != null && bal.TotalWeightKg > 0 && bal.BodyLengthMm > 0)
+            {
+                double cx = bal.CgXMm * scale;
+                double cy = bal.CgYMm * scale;
+
+                var crossH = new Line
+                {
+                    X1 = cx - 9, Y1 = cy, X2 = cx + 9, Y2 = cy,
+                    Stroke = Theme.GetBrush("Accent"), StrokeThickness = 1.5,
+                    IsHitTestVisible = false,
+                };
+                var crossV = new Line
+                {
+                    X1 = cx, Y1 = cy - 9, X2 = cx, Y2 = cy + 9,
+                    Stroke = Theme.GetBrush("Accent"), StrokeThickness = 1.5,
+                    IsHitTestVisible = false,
+                };
+                var dot = new Ellipse
+                {
+                    Width = 9, Height = 9,
+                    Stroke = Theme.GetBrush("Accent"),
+                    StrokeThickness = 1.6,
+                    Fill = Theme.GetBrush("Canvas"),
+                    ToolTip = $"Центр тяжести\n{bal.CgXMm / 1000.0:0.00} м от переда, " +
+                              $"{bal.CgYMm / 1000.0:0.00} м от левого борта\n" +
+                              $"перед/зад: {bal.FrontPct:0.0} / {bal.RearPct:0.0} %\n" +
+                              $"лево/право: {bal.LeftPct:0.0} / {bal.RightPct:0.0} %",
+                };
+                Canvas.SetLeft(dot, cx - 4.5);
+                Canvas.SetTop(dot, cy - 4.5);
+
+                PackCanvas.Children.Add(crossH);
+                PackCanvas.Children.Add(crossV);
+                PackCanvas.Children.Add(dot);
+            }
+
             FillLegend(result);
             FillTruckReport(truck);
         }
@@ -890,13 +947,31 @@ namespace CargoLoad
                 ? $"{mx / tw / 1000:0.00} × {my / tw / 1000:0.00} × {mz / tw / 1000:0.00} м"
                 : "—";
 
+            var bal = r.Balance;
+            string balanceBlock = "";
+            if (bal != null && bal.TotalWeightKg > 0)
+            {
+                bool ok = bal.IsSideBalanced(Packer.SideBalanceTolerancePct);
+                balanceBlock =
+                    $"\n\nБаланс по осям (перед / зад): {bal.FrontPct:0.0} % / {bal.RearPct:0.0} %" +
+                    $"  ·  перекос {bal.EndImbalancePct:0.0} %" +
+                    $"\nБаланс по бортам (лево / право): {bal.LeftPct:0.0} % / {bal.RightPct:0.0} %" +
+                    $"  ·  перекос {bal.SideImbalancePct:0.0} %" +
+                    $"\nСмещение ЦМ от центра кузова: {bal.CgOffsetXMm / 1000.0:+0.00;-0.00;0} м по длине," +
+                    $" {bal.CgOffsetYMm / 1000.0:+0.00;-0.00;0} м по ширине" +
+                    (ok
+                        ? $"\nДопуск по бортам ≤ {Packer.SideBalanceTolerancePct:0} % — соблюдён"
+                        : $"\nВНИМАНИЕ: перекос по бортам {bal.SideImbalancePct:0.0} % превышает допуск {Packer.SideBalanceTolerancePct:0} %");
+            }
+
             ReportText.Text =
                 $"Машина {truck.Index + 1}: {v.Name}\n" +
                 $"Кузов: {v.DimsText} м ({r.TruckVolumeM3:0.0} м³), {v.PayloadText} т\n\n" +
                 $"Мест: {r.Placed.Count} (1-й ярус: {tier0}, 2-й ярус: {tier1})\n" +
                 $"Заполнение объёма: {fillVol:0.0} %\n" +
                 $"Вес: {r.TotalWeightKg / 1000.0:0.###} т ({fillWt:0.0} %)\n" +
-                $"Центр тяжести: {cg}";
+                $"Центр тяжести: {cg}" +
+                balanceBlock;
         }
 
         // ---------------- Демо-режим / CLI ----------------
