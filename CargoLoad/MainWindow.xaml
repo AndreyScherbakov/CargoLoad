@@ -1,0 +1,333 @@
+<Window x:Class="CargoLoad.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Раскладка грузов" Height="840" Width="1280"
+        MinHeight="640" MinWidth="1020"
+        WindowStartupLocation="CenterScreen"
+        Background="#121419"
+        FontFamily="Segoe UI Variable Text, Segoe UI"
+        UseLayoutRounding="True">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="Bg" Color="#121419" />
+        <SolidColorBrush x:Key="Panel" Color="#1B1E25" />
+        <SolidColorBrush x:Key="Border" Color="#2A2F3A" />
+        <SolidColorBrush x:Key="Text" Color="#E9ECF2" />
+        <SolidColorBrush x:Key="Muted" Color="#8D96A6" />
+        <SolidColorBrush x:Key="Accent" Color="#3B6EF6" />
+
+        <Style x:Key="Btn" TargetType="Button">
+            <Setter Property="Foreground" Value="#E9ECF2" />
+            <Setter Property="Background" Value="#252A35" />
+            <Setter Property="BorderBrush" Value="#2A2F3A" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#2E3441" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#1A1E27" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BtnAccent" TargetType="Button" BasedOn="{StaticResource Btn}">
+            <Setter Property="Background" Value="#3B6EF6" />
+            <Setter Property="BorderBrush" Value="#3B6EF6" />
+        </Style>
+
+        <Style x:Key="Input" TargetType="TextBox">
+            <Setter Property="Background" Value="#12151B" />
+            <Setter Property="Foreground" Value="#E9ECF2" />
+            <Setter Property="BorderBrush" Value="#2A2F3A" />
+            <Setter Property="CaretBrush" Value="#E9ECF2" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <Style x:Key="InputCb" TargetType="ComboBox">
+            <Setter Property="Background" Value="#12151B" />
+            <Setter Property="Foreground" Value="#E9ECF2" />
+            <Setter Property="BorderBrush" Value="#2A2F3A" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <Style x:Key="Lbl" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#8D96A6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="#C7CDD8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Background" Value="#1B1E25" />
+        </Style>
+    </Window.Resources>
+
+    <TabControl x:Name="MainTab" Background="Transparent" BorderThickness="0">
+        <TabControl.Resources>
+            <Style TargetType="TabPanel">
+                <Setter Property="Background" Value="#161920" />
+            </Style>
+        </TabControl.Resources>
+
+        <!-- ============ ТС ============ -->
+        <TabItem Header="  Транспортные средства  ">
+            <Grid Margin="20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <DockPanel Grid.Column="0" Margin="0,0,16,0">
+                    <TextBlock DockPanel.Dock="Top" Text="Справочник ТС" Foreground="#F2F4F8"
+                               FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <ListBox x:Name="VehicleList" Background="#1B1E25" Foreground="#E9ECF2"
+                             BorderBrush="#2A2F3A" SelectionChanged="VehicleList_SelectionChanged" />
+                </DockPanel>
+
+                <Border Grid.Column="1" Background="#1B1E25" BorderBrush="#2A2F3A"
+                        BorderThickness="1" CornerRadius="10" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="Параметры ТС" Foreground="#F2F4F8" FontSize="16"
+                                   FontWeight="SemiBold" Margin="0,0,0,16" />
+                        <TextBlock Style="{StaticResource Lbl}" Text="Название" />
+                        <TextBox x:Name="VName" Style="{StaticResource Input}" Margin="0,0,0,10" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Style="{StaticResource Lbl}" Text="Длина, м" />
+                                <TextBox x:Name="VLen" Style="{StaticResource Input}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                <TextBlock Style="{StaticResource Lbl}" Text="Ширина, м" />
+                                <TextBox x:Name="VWid" Style="{StaticResource Input}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource Lbl}" Text="Высота, м" />
+                                <TextBox x:Name="VHei" Style="{StaticResource Input}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Style="{StaticResource Lbl}" Text="Грузоподъёмность, т" />
+                                <TextBox x:Name="VPayload" Style="{StaticResource Input}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Style="{StaticResource Lbl}" Text="Способ погрузки" />
+                                <ComboBox x:Name="VLoad" Style="{StaticResource InputCb}">
+                                    <ComboBoxItem Content="зад / бок" Tag="3" />
+                                    <ComboBoxItem Content="бок / верх" Tag="6" />
+                                    <ComboBoxItem Content="верх" Tag="4" />
+                                    <ComboBoxItem Content="зад" Tag="1" />
+                                    <ComboBoxItem Content="бок" Tag="2" />
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <Button x:Name="BtnVehAdd" Style="{StaticResource BtnAccent}" Content="Добавить"
+                                    Click="BtnVehAdd_Click" Margin="0,0,10,0" />
+                            <Button x:Name="BtnVehSave" Style="{StaticResource Btn}" Content="Сохранить"
+                                    Click="BtnVehSave_Click" Margin="0,0,10,0" />
+                            <Button x:Name="BtnVehDelete" Style="{StaticResource Btn}" Content="Удалить"
+                                    Click="BtnVehDelete_Click" />
+                        </StackPanel>
+                        <TextBlock x:Name="VehStatus" Foreground="#6E778A" FontSize="12" Margin="0,12,0,0"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </TabItem>
+
+        <!-- ============ Задания ============ -->
+        <TabItem Header="  Задания на погрузку  ">
+            <Grid Margin="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="False">
+                    <TextBlock DockPanel.Dock="Left" Text="Задание:" VerticalAlignment="Center"
+                               Foreground="#8D96A6" Margin="0,0,10,0" />
+                    <ComboBox x:Name="ShipmentCombo" DockPanel.Dock="Left" Width="320" VerticalAlignment="Center"
+                              Style="{StaticResource InputCb}" SelectionChanged="ShipmentCombo_SelectionChanged" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Content="Удалить задание"
+                            Click="BtnDeleteShipment_Click" Margin="10,0,0,0" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Content="Импорт Excel/CSV"
+                            Click="BtnImport_Click" Margin="10,0,0,0" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource BtnAccent}" Content="Новое задание"
+                            Click="BtnNewShipment_Click" />
+                </DockPanel>
+
+                <DataGrid x:Name="ItemsGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True"
+                          Background="#1B1E25" Foreground="#E9ECF2" BorderBrush="#2A2F3A"
+                          RowBackground="#1B1E25" AlternatingRowBackground="#20242D"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#2A2F3A"
+                          HeadersVisibility="Column" FontSize="13">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#161920" />
+                            <Setter Property="Foreground" Value="#8D96A6" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="Padding" Value="10,8" />
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Название" Binding="{Binding Cargo.Name}" Width="*" />
+                        <DataGridTextColumn Header="Кол-во" Binding="{Binding Quantity}" Width="70" />
+                        <DataGridTextColumn Header="Д, мм" Binding="{Binding Cargo.LengthMm}" Width="80" />
+                        <DataGridTextColumn Header="Ш, мм" Binding="{Binding Cargo.WidthMm}" Width="80" />
+                        <DataGridTextColumn Header="В, мм" Binding="{Binding Cargo.HeightMm}" Width="80" />
+                        <DataGridTextColumn Header="Вес ед., кг" Binding="{Binding Cargo.WeightKg}" Width="100" />
+                        <DataGridTextColumn Header="Вес всего, кг" Binding="{Binding TotalWeightKg}" Width="110" />
+                        <DataGridTextColumn Header="Штаб." Binding="{Binding Cargo.Stackable}" Width="70" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <Border Grid.Row="2" Background="#1B1E25" BorderBrush="#2A2F3A" BorderThickness="1"
+                        CornerRadius="10" Padding="16" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Добавить груз вручную" Foreground="#F2F4F8" FontSize="14"
+                                   FontWeight="SemiBold" Margin="0,0,0,10" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="70" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="MName" Grid.Column="0" Style="{StaticResource Input}" Margin="0,0,6,0" Text="Груз" />
+                            <TextBox x:Name="MQty" Grid.Column="1" Style="{StaticResource Input}" Margin="0,0,6,0" Text="1" />
+                            <TextBox x:Name="ML" Grid.Column="2" Style="{StaticResource Input}" Margin="0,0,6,0" Text="1200" />
+                            <TextBox x:Name="MW" Grid.Column="3" Style="{StaticResource Input}" Margin="0,0,6,0" Text="800" />
+                            <TextBox x:Name="MH" Grid.Column="4" Style="{StaticResource Input}" Margin="0,0,6,0" Text="1000" />
+                            <TextBox x:Name="MWeight" Grid.Column="5" Style="{StaticResource Input}" Margin="0,0,6,0" Text="100" />
+                            <Button x:Name="BtnAddItem" Grid.Column="6" Style="{StaticResource BtnAccent}"
+                                    Content="Добавить" Click="BtnAddItem_Click" />
+                        </Grid>
+                        <TextBlock Foreground="#6E778A" FontSize="11" Margin="0,6,0,0"
+                                   Text="Порядок колонок: название · кол-во · длина(мм) · ширина(мм) · высота(мм) · вес одной единицы(кг)" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </TabItem>
+
+        <!-- ============ Раскладка ============ -->
+        <TabItem Header="  Раскладка  ">
+            <Grid Margin="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="False">
+                    <TextBlock DockPanel.Dock="Left" Text="Задание:" VerticalAlignment="Center"
+                               Foreground="#8D96A6" Margin="0,0,8,0" />
+                    <ComboBox x:Name="PackShipmentCombo" DockPanel.Dock="Left" Width="240" VerticalAlignment="Center"
+                              Style="{StaticResource InputCb}" />
+                    <TextBlock DockPanel.Dock="Left" Text="ТС:" VerticalAlignment="Center"
+                               Foreground="#8D96A6" Margin="16,0,8,0" />
+                    <ComboBox x:Name="PackVehicleCombo" DockPanel.Dock="Left" Width="200" VerticalAlignment="Center"
+                              Style="{StaticResource InputCb}" />
+                    <TextBlock DockPanel.Dock="Left" Text="Ориентация:" VerticalAlignment="Center"
+                               Foreground="#8D96A6" Margin="16,0,8,0" />
+                    <ComboBox x:Name="PackModeCombo" DockPanel.Dock="Left" Width="220" VerticalAlignment="Center"
+                              Style="{StaticResource InputCb}" SelectedIndex="0">
+                        <ComboBoxItem Content="Длинной стороной вдоль" />
+                        <ComboBoxItem Content="+ поворот на 90°" />
+                        <ComboBoxItem Content="Свободная (кантование)" />
+                    </ComboBox>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource BtnAccent}" Content="Рассчитать"
+                            Click="BtnPack_Click" Padding="22,8" />
+                </DockPanel>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="320" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="#1B1E25" BorderBrush="#2A2F3A" BorderThickness="1"
+                            CornerRadius="10" Margin="0,0,12,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Вид сверху" Foreground="#8D96A6" FontSize="12"
+                                       Margin="14,10,0,6" />
+                            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto">
+                                <Canvas x:Name="PackCanvas" Background="#0E1014" Margin="12,0,12,12" />
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="1">
+                        <Border Background="#1B1E25" BorderBrush="#2A2F3A" BorderThickness="1"
+                                CornerRadius="10" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Отчёт" Foreground="#F2F4F8" FontSize="15"
+                                           FontWeight="SemiBold" Margin="0,0,0,10" />
+                                <TextBlock x:Name="ReportText" Foreground="#C7CDD8" FontSize="13"
+                                           TextWrapping="Wrap" LineHeight="22" />
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#1B1E25" BorderBrush="#2A2F3A" BorderThickness="1"
+                                CornerRadius="10" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Не размещено" Foreground="#F2F4F8" FontSize="15"
+                                           FontWeight="SemiBold" Margin="0,0,0,10" />
+                                <TextBlock x:Name="UnplacedText" Foreground="#E8A0A0" FontSize="13"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#1B1E25" BorderBrush="#2A2F3A" BorderThickness="1"
+                                CornerRadius="10" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="Легенда" Foreground="#F2F4F8" FontSize="15"
+                                           FontWeight="SemiBold" Margin="0,0,0,10" />
+                                <StackPanel x:Name="LegendPanel" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </TabItem>
+    </TabControl>
+</Window>

@@ -1,0 +1,44 @@
+# ---------- Сборка .NET ----------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.pdb
+*.cache
+
+# ---------- Локальное окружение DSH ----------
+# перенаправленные домашние каталоги dotnet/NuGet (см. build.ps1)
+.dotnet-home/
+.nuget/
+.appdata/
+.localappdata/
+
+# ---------- Данные приложения ----------
+# локальная база SQLite создаётся при первом запуске
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ---------- Локальный черновой проект ----------
+# демо-приложение «System Info», не относится к CargoLoad
+/SystemInfo/
+/screenshot.png
+
+# ---------- Временные артефакты ----------
+_*.png
+_*.out
+_*.err
+
+# ---------- ОС / IDE ----------
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/
